@@ -64,9 +64,9 @@ model User {
   uploadedAttachments Attachment[]   @relation("UploadedAttachments")
   issueHistory        IssueHistory[] @relation("IssueHistoryUser")
   notifications       Notification[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  refreshTokens       RefreshToken[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model SLA {
@@ -182,6 +182,20 @@ model IssueHistory {
   field    String
   oldValue String?
   newValue String?
+
+  createdAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id String @id @default(uuid())
+
+  tokenHash String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  revokedAt DateTime?
 
   createdAt DateTime @default(now())
 }
