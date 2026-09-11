@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { registerSchema, loginSchema } from "../validators/auth.validator.js";
-import { registerUser, loginUser,refreshAccessToken } from "../services/auth.services.js";
+import { registerUser,loginUser,refreshAccessToken,logoutUser
+} from "../services/auth.services.js";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -84,6 +85,33 @@ export const refresh = async (req: Request, res: Response) => {
     return res.status(401).json({
       status: "error",
       message: "Invalid or expired refresh token",
+    });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        status: "error",
+        message: "Refresh token is required",
+      });
+    }
+
+    await logoutUser(refreshToken);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      status: "error",
+      message: "Logout failed",
     });
   }
 };

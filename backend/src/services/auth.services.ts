@@ -153,8 +153,6 @@ export const refreshAccessToken = async (refreshToken: string) => {
     },
   });
 
-
-
   const accessToken = generateAccessToken({
     userId: storedToken.user.id,
     role: storedToken.user.role,
@@ -164,4 +162,27 @@ export const refreshAccessToken = async (refreshToken: string) => {
   return {
     accessToken,
   };
+};
+
+export const logoutUser = async (refreshToken: string) => {
+  const tokenHash = hashRefreshToken(refreshToken);
+
+  const storedToken = await prisma.refreshToken.findUnique({
+    where: {
+      tokenHash,
+    },
+  });
+
+  if (!storedToken) {
+    return;
+  }
+
+  await prisma.refreshToken.update({
+    where: {
+      id: storedToken.id,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
 };
