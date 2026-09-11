@@ -1,7 +1,10 @@
 import bcrypt from "bcrypt";
 import { prisma } from "../config/prisma.js";
 import { generateAccessToken } from "../utils/jwt.js";
-import { generateRefreshToken, hashRefreshToken } from "../utils/refresh-token.js";
+import {
+  generateRefreshToken,
+  hashRefreshToken,
+} from "../utils/refresh-token.js";
 
 interface RegisterInput {
   name: string;
@@ -59,7 +62,6 @@ export const registerUser = async (input: RegisterInput) => {
 };
 
 export const loginUser = async (email: string, password: string) => {
-
   const user = await prisma.user.findUnique({
     where: {
       email,
@@ -93,15 +95,73 @@ export const loginUser = async (email: string, password: string) => {
     },
   });
 
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      organizationId: user.organizationId,
+    },
+    accessToken,
+    refreshToken,
+  };
+};
+
+export const refreshAccessToken = async (refreshToken: string) => {
+  const tokenHash = hashRefreshToken(refreshToken);
+
+  const storedToken = await prisma.refreshToken.findUnique({
+    where: {
+      tokenHash,
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!storedToken) {
+    throw new Error("Invalid refresh token");
+  }
+
+  if (storedToken.revokedAt) {
+    throw new Error("Refresh token has been revoked");
+  }
+
+  if (storedToken.expiresAt < new Date()) {
+    throw new Error("Refresh token has expired");
+  }
+
+  await prisma.refreshToken.update({
+    where: {
+      id: storedToken.id,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+
+  const newRefreshToken = generateRefreshToken();
+
+  const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: newRefreshTokenHash,
+      userId: storedToken.user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+
+
+  const accessToken = generateAccessToken({
+    userId: storedToken.user.id,
+    role: storedToken.user.role,
+    organizationId: storedToken.user.organizationId,
+  });
 
   return {
-    user :{
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    organizationId: user.organizationId,
-  },accessToken,
-  refreshToken,
+    accessToken,
   };
 };

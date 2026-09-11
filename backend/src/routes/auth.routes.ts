@@ -4,6 +4,7 @@ import {
   login,
   getMe,
   adminTest,
+  refresh
 } from "../controllers/auth.controller.js";
 
 import { authenticate } from "../middleware/auth.middleware.js";
@@ -16,8 +17,11 @@ router.post("/register", register);
 
 router.post("/login", login);
 
+router.post("/refresh",refresh);
+
 router.get("/me", authenticate, getMe);
 
 router.get("/admin-test", authenticate, authorize(Role.ADMIN), adminTest);
+
 
 export default router;
