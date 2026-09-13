@@ -26,3 +26,6 @@ Thumbs.db
 
 # Temporary files
 *.tmp
+
+# Private documentation (interview prep, pipeline notes)
+docs/

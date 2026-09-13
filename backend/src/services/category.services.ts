@@ -30,3 +30,15 @@ export const getCategories = async (organizationId: string) => {
     },
   });
 };
+
+export const getCategoryById = async (
+  categoryId:string,
+  organizationId: string
+)=>{
+  return prisma.category.findFirst({
+    where: {
+      id : categoryId,
+      organizationId,
+    },
+  });
+};
