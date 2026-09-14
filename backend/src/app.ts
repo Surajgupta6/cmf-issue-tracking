@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import { errorHandler } from "./middleware/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 
@@ -153,6 +154,7 @@ app.use("/api/v1/auth", authLimiter, authRoutes);
 
 // All other API routes — apply general rate limiter
 app.use("/api/v1/categories", apiLimiter, categoryRoutes);
+app.use("/api/v1/users", apiLimiter, userRoutes);
 
 /**
  * =========================================================
