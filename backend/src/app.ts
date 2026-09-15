@@ -4,12 +4,15 @@ import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import path from "path";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import issueRoutes from "./routes/issue.routes.js";
+import commentRoutes from "./routes/comment.routes.js";
+import attachmentRoutes from "./routes/attachment.routes.js";
 
 const app = express();
 
@@ -153,10 +156,17 @@ app.get("/api/v1/health", (_req: Request, res: Response) => {
 // Auth routes — apply strict rate limiter
 app.use("/api/v1/auth", authLimiter, authRoutes);
 
+// Serve uploaded files statically (development)
+// In production: serve files from S3/CDN instead
+// process.cwd() resolves to the backend/ directory at runtime
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 // All other API routes — apply general rate limiter
 app.use("/api/v1/categories", apiLimiter, categoryRoutes);
 app.use("/api/v1/users", apiLimiter, userRoutes);
 app.use("/api/v1/issues", apiLimiter, issueRoutes);
+app.use("/api/v1/issues/:issueId/comments", apiLimiter, commentRoutes);
+app.use("/api/v1/issues/:issueId/attachments", apiLimiter, attachmentRoutes);
 
 /**
  * =========================================================
