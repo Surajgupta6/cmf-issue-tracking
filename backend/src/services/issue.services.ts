@@ -434,7 +434,13 @@ export const updateIssueStatus = async (
   return prisma.$transaction(async (tx) => {
     const updated = await tx.issue.update({
       where: { id: issueId },
-      data: { status: newStatus },
+      data: {
+        status: newStatus,
+        // Record when the issue was resolved — used for avg resolution time analytics
+        ...(newStatus === IssueStatus.RESOLVED && { resolvedAt: new Date() }),
+        // Clear resolvedAt if reopened (issue is no longer resolved)
+        ...(newStatus === IssueStatus.REOPENED && { resolvedAt: null }),
+      },
       include: ISSUE_INCLUDE,
     });
 

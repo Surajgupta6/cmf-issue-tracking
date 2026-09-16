@@ -137,6 +137,8 @@ model Issue {
   history     IssueHistory[]
   sla         SLA?
 
+  resolvedAt DateTime?  // Set when status → RESOLVED. Used for avg resolution time analytics.
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
