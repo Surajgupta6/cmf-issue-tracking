@@ -101,7 +101,7 @@ api.interceptors.response.use(
           refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = data.data.tokens;
+        const { accessToken, refreshToken: newRefreshToken } = data.data;
         setTokens(accessToken, newRefreshToken);
 
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
