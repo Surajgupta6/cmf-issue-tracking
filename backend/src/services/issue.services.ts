@@ -3,6 +3,11 @@ import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/app-error.js";
 import { calculateSlaDeadlines } from "../utils/sla-policy.js";
 import { validateTransition } from "../utils/issue-state-machine.js";
+import {
+  notifyIssueCreated,
+  notifyStatusChanged,
+  notifyIssueAssigned,
+} from "./notification.services.js";
 
 /**
  * Issue Service
@@ -138,6 +143,23 @@ export const createIssue = async (input: CreateIssueInput) => {
         newValue: IssueStatus.OPEN,
       },
     });
+
+    // Step 4: Notify all managers/admins in the org about the new issue
+    const creator = await tx.user.findUnique({
+      where: { id: createdById },
+      select: { name: true },
+    });
+    await notifyIssueCreated(
+      {
+        issueId: newIssue.id,
+        issueTitle: title,
+        priority,
+        organizationId,
+        creatorId: createdById,
+        creatorName: creator?.name ?? "Someone",
+      },
+      tx,
+    );
 
     return newIssue;
   });
@@ -454,6 +476,24 @@ export const updateIssueStatus = async (
       },
     });
 
+    // Notify issue creator + assigned agent about status change
+    const actor = await tx.user.findUnique({
+      where: { id: requesterId },
+      select: { name: true },
+    });
+    await notifyStatusChanged(
+      {
+        issueId,
+        issueTitle: issue.title,
+        newStatus,
+        actorName: actor?.name ?? "Someone",
+        creatorId: issue.createdById,
+        assignedToId: issue.assignedToId,
+      },
+      requesterId,
+      tx,
+    );
+
     return updated;
   });
 };
@@ -541,6 +581,22 @@ export const assignIssue = async (
         },
       ],
     });
+
+    // Notify the assigned agent
+    const assigner = await tx.user.findUnique({
+      where: { id: requesterId },
+      select: { name: true },
+    });
+    await notifyIssueAssigned(
+      {
+        issueId,
+        issueTitle: issue.title,
+        agentId,
+        assignerName: assigner?.name ?? "Someone",
+      },
+      requesterId,
+      tx,
+    );
 
     return updated;
   });

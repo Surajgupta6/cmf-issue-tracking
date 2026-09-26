@@ -1,6 +1,7 @@
 import { Role } from "../generated/prisma/client.js";
 import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/app-error.js";
+import { notifyCommentAdded } from "./notification.services.js";
 
 /**
  * Comment Service
@@ -66,15 +67,26 @@ export const createComment = async (
     );
   }
 
-  return prisma.comment.create({
-    data: {
-      content,
-      issueId,
-      userId: authorId,
-    },
-    include: {
-      user: SAFE_USER,
-    },
+  return prisma.$transaction(async (tx) => {
+    const comment = await tx.comment.create({
+      data: { content, issueId, userId: authorId },
+      include: { user: SAFE_USER },
+    });
+
+    // Notify issue creator + assigned agent about the new comment
+    await notifyCommentAdded(
+      {
+        issueId,
+        issueTitle: issue.title,
+        commenterName: comment.user.name,
+        creatorId: issue.createdById,
+        assignedToId: issue.assignedToId,
+      },
+      authorId,
+      tx,
+    );
+
+    return comment;
   });
 };
 

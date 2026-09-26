@@ -35,6 +35,14 @@ enum Priority {
   CRITICAL
 }
 
+enum NotificationType {
+  ISSUE_CREATED       // → managers in org
+  ISSUE_ASSIGNED      // → assigned agent
+  ISSUE_STATUS_CHANGED // → issue creator + assigned agent
+  COMMENT_ADDED       // → issue creator + assigned agent (not commenter)
+  SLA_BREACH_WARNING  // → assigned agent + managers (future: cron job)
+}
+
 model Organization {
   id         String     @id @default(uuid())
   name       String
@@ -90,13 +98,22 @@ model Notification {
   id String @id @default(uuid())
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  type    NotificationType
   title   String
   message String
-  isRead  Boolean @default(false)
+  isRead  Boolean   @default(false)
+  readAt  DateTime?
+
+  // Optional link to the triggering issue
+  issueId String?
+  issue   Issue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+
+  @@index([userId, isRead])   // Fast unread count queries
+  @@index([userId, createdAt]) // Fast paginated list queries
 }
 
 model Category {
@@ -132,10 +149,11 @@ model Issue {
   assignedToId String?
   assignedTo   User?   @relation("AssignedIssues", fields: [assignedToId], references: [id])
 
-  comments    Comment[]
-  attachments Attachment[]
-  history     IssueHistory[]
-  sla         SLA?
+  comments      Comment[]
+  attachments   Attachment[]
+  history       IssueHistory[]
+  sla           SLA?
+  notifications Notification[]
 
   resolvedAt DateTime?  // Set when status → RESOLVED. Used for avg resolution time analytics.
 

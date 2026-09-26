@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import NotificationBell from "@/components/layout/NotificationBell";
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["ADMIN", "MANAGER", "AGENT"] },
@@ -42,20 +43,19 @@ export default function Sidebar() {
         zIndex: 40,
       }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5" style={{ borderBottom: "1px solid #1e293b" }}>
+      {/* Logo + notification bell */}
+      <div className="flex items-center gap-2 px-4 py-5" style={{ borderBottom: "1px solid #1e293b" }}>
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: "linear-gradient(135deg,#8b5cf6,#3b82f6)" }}
         >
           <Zap size={18} className="text-white" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="text-slate-100 font-semibold text-sm leading-tight">CMF Tracker</div>
-          <div className="text-slate-500 text-xs truncate max-w-[130px]" title={user?.organizationId ?? ""}>
-            {role ?? "Loading…"}
-          </div>
+          <div className="text-slate-500 text-xs">{role ?? "Loading…"}</div>
         </div>
+        <NotificationBell />
       </div>
 
       {/* Nav */}

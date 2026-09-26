@@ -14,6 +14,7 @@ import issueRoutes from "./routes/issue.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import attachmentRoutes from "./routes/attachment.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 
@@ -169,6 +170,7 @@ app.use("/api/v1/issues", apiLimiter, issueRoutes);
 app.use("/api/v1/issues/:issueId/comments", apiLimiter, commentRoutes);
 app.use("/api/v1/issues/:issueId/attachments", apiLimiter, attachmentRoutes);
 app.use("/api/v1/dashboard", apiLimiter, dashboardRoutes);
+app.use("/api/v1/notifications", apiLimiter, notificationRoutes);
 
 /**
  * =========================================================
