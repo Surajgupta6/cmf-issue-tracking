@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
@@ -15,6 +15,9 @@ import commentRoutes from "./routes/comment.routes.js";
 import attachmentRoutes from "./routes/attachment.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import { authenticate } from "./middleware/auth.middleware.js";
+import { authorize } from "./middleware/role.middleware.js";
+import { Role } from "./generated/prisma/client.js";
 
 const app = express();
 
@@ -171,6 +174,27 @@ app.use("/api/v1/issues/:issueId/comments", apiLimiter, commentRoutes);
 app.use("/api/v1/issues/:issueId/attachments", apiLimiter, attachmentRoutes);
 app.use("/api/v1/dashboard", apiLimiter, dashboardRoutes);
 app.use("/api/v1/notifications", apiLimiter, notificationRoutes);
+
+/**
+ * POST /api/v1/admin/sla-scan
+ * Manually trigger the SLA breach detection job.
+ * ADMIN-only. Useful for demos, testing, and operational runbooks.
+ * In production: protect this behind an internal VPC or API key.
+ */
+app.post(
+  "/api/v1/admin/sla-scan",
+  authenticate,
+  authorize(Role.ADMIN),
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { runSlaBreachDetection } = await import("./jobs/index.js");
+      await runSlaBreachDetection();
+      res.json({ status: "success", message: "SLA breach scan completed" });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /**
  * =========================================================

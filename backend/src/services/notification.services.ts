@@ -1,6 +1,9 @@
 import { NotificationType, Role } from "../generated/prisma/client.js";
 import { prisma } from "../config/prisma.js";
 
+/** Transaction client type — avoids importing internal Prisma runtime types */
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 /**
  * Notification Service
  *
@@ -43,7 +46,7 @@ export interface NotificationPayload {
  */
 export async function getManagerIds(
   organizationId: string,
-  tx = prisma,
+  tx: TxClient | typeof prisma = prisma,
 ): Promise<string[]> {
   const managers = await tx.user.findMany({
     where: {
@@ -68,7 +71,7 @@ export async function getManagerIds(
 export async function createNotifications(
   payloads: NotificationPayload[],
   excludeUserId: string,
-  tx = prisma,
+  tx: TxClient | typeof prisma = prisma,
 ): Promise<void> {
   if (payloads.length === 0) return;
 
@@ -109,7 +112,7 @@ export async function notifyIssueCreated(
     creatorId: string;
     creatorName: string;
   },
-  tx = prisma,
+  tx: TxClient | typeof prisma = prisma,
 ): Promise<void> {
   const managerIds = await getManagerIds(organizationId, tx);
 
@@ -140,7 +143,7 @@ export async function notifyIssueAssigned(
     assignerName: string;
   },
   actorId: string,
-  tx = prisma,
+  tx: TxClient | typeof prisma = prisma,
 ): Promise<void> {
   await createNotifications(
     [
@@ -177,7 +180,7 @@ export async function notifyStatusChanged(
     assignedToId: string | null;
   },
   actorId: string,
-  tx = prisma,
+  tx: TxClient | typeof prisma = prisma,
 ): Promise<void> {
   const recipients = [creatorId, ...(assignedToId ? [assignedToId] : [])];
 
@@ -210,7 +213,7 @@ export async function notifyCommentAdded(
     assignedToId: string | null;
   },
   commenterId: string,
-  tx = prisma,
+  tx: TxClient | typeof prisma = prisma,
 ): Promise<void> {
   const recipients = [creatorId, ...(assignedToId ? [assignedToId] : [])];
 

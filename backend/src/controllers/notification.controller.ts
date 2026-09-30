@@ -61,7 +61,7 @@ export const markRead = async (
   next: NextFunction,
 ) => {
   try {
-    await markOneRead(req.params.id, req.user!.userId);
+    await markOneRead(req.params.id as string, req.user!.userId);
     res.json({ status: "success", message: "Notification marked as read" });
   } catch (err) {
     next(err);
