@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  AGENT
+  CUSTOMER
+}
+
+enum IssueStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  ISSUE_CREATED       // → managers in org
+  ISSUE_ASSIGNED      // → assigned agent
+  ISSUE_STATUS_CHANGED // → issue creator + assigned agent
+  COMMENT_ADDED       // → issue creator + assigned agent (not commenter)
+  SLA_BREACH_WARNING  // → assigned agent + managers (future: cron job)
+}
+
+model Organization {
+  id         String     @id @default(uuid())
+  name       String
+  users      User[]
+  categories Category[]
+  issues     Issue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  role         Role    @default(CUSTOMER)
+  isActive     Boolean @default(true)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  createdIssues  Issue[] @relation("CreatedIssues")
+  assignedIssues Issue[] @relation("AssignedIssues")
+
+  comments Comment[]
+
+  uploadedAttachments Attachment[]   @relation("UploadedAttachments")
+  issueHistory        IssueHistory[] @relation("IssueHistoryUser")
+  notifications       Notification[]
+  refreshTokens       RefreshToken[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+}
+
+model SLA {
+  id String @id @default(uuid())
+
+  issueId String @unique
+  issue   Issue  @relation(fields: [issueId], references: [id])
+
+  responseDeadline   DateTime
+  resolutionDeadline DateTime
+
+  responseBreached   Boolean @default(false)
+  resolutionBreached Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String
+  isRead  Boolean   @default(false)
+  readAt  DateTime?
+
+  // Optional link to the triggering issue
+  issueId String?
+  issue   Issue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])   // Fast unread count queries
+  @@index([userId, createdAt]) // Fast paginated list queries
+}
+
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  issues Issue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Issue {
+  id          String @id @default(uuid())
+  title       String
+  description String
+
+  status   IssueStatus @default(OPEN)
+  priority Priority    @default(MEDIUM)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("CreatedIssues", fields: [createdById], references: [id])
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedIssues", fields: [assignedToId], references: [id])
+
+  comments      Comment[]
+  attachments   Attachment[]
+  history       IssueHistory[]
+  sla           SLA?
+  notifications Notification[]
+
+  resolvedAt DateTime?  // Set when status → RESOLVED. Used for avg resolution time analytics.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  content String
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attachment {
+  id       String @id @default(uuid())
+  filename String
+  url      String
+  mimeType String
+  size     Int
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id])
+
+  uploadedById String
+  uploadedBy   User   @relation("UploadedAttachments", fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model IssueHistory {
+  id String @id @default(uuid())
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id])
+
+  changedById String
+  changedBy   User   @relation("IssueHistoryUser", fields: [changedById], references: [id])
+
+  field    String
+  oldValue String?
+  newValue String?
+
+  createdAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id String @id @default(uuid())
+
+  tokenHash String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+}
